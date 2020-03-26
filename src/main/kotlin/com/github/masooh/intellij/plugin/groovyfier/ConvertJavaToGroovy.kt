@@ -16,6 +16,8 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import org.jetbrains.plugins.groovy.lang.psi.GroovyPsiElementFactory
 import org.jetbrains.plugins.groovy.lang.psi.api.statements.typedef.GrTypeDefinition
 import java.io.IOException
@@ -29,6 +31,8 @@ class ConvertJavaToGroovy : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = requireNotNull(event.project)
         val currentFile = event.getData(PlatformDataKeys.VIRTUAL_FILE)
+
+        // todo currentFile.!! war wohl keine gute Idee -> behandeln
 
         if ("java" == currentFile!!.extension) {
             val groovySourceRoot = createGroovySourceRoot(project, currentFile)
@@ -51,13 +55,20 @@ class ConvertJavaToGroovy : AnAction() {
                                               project: Project,
                                               event: AnActionEvent) {
         renameAndMoveToGroovy(currentFile, groovySourceRoot, project)
-        replaceCurlyBracesInAnnotationAttributes(event, project)
-        GroovyFixesApplier.applyGroovyFixes(event)
-        JUnitToSpockApplier(event).transformToSpock()
+
+        // todo work with this file, old PSI is wrong as moved and renamed, check rename action
+        val groovyPsiFile = requireNotNull(PsiManager.getInstance(project).findFile(currentFile))
+
+        // todo exception handling -> remove !!
+
+        replaceCurlyBracesInAnnotationAttributes(groovyPsiFile, project)
+
+        // todo do not use event -> use virtual file as base for the following
+        GroovyFixesApplier.applyGroovyFixes(event, groovyPsiFile)
+        JUnitToSpockApplier(event, groovyPsiFile).transformToSpock()
     }
 
-    private fun replaceCurlyBracesInAnnotationAttributes(event: AnActionEvent, project: Project?) {
-        val psiFile = event.getRequiredData(PlatformDataKeys.PSI_FILE)
+    private fun replaceCurlyBracesInAnnotationAttributes(psiFile: PsiFile, project: Project?) {
         val typeDefinition = psiFile.getPsiClass() as GrTypeDefinition
 
         WriteCommandAction.runWriteCommandAction(project) {
@@ -126,7 +137,7 @@ class ConvertJavaToGroovy : AnAction() {
                 currentFile.move(this, lastCreatedDir)
             }
         } catch (e: IOException) {
-            LOG.error(e)
+            LOG.error(e) // fixme macht es Sinn hier noch weiter zu machen?
         }
 
     }

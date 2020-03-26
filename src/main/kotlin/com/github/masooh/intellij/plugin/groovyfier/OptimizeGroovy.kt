@@ -4,6 +4,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.psi.PsiManager
 import org.jetbrains.plugins.groovy.GroovyFileType
 
 /**
@@ -13,13 +14,17 @@ class OptimizeGroovy : AnAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val currentFile = requireNotNull(event.getData(PlatformDataKeys.VIRTUAL_FILE))
+        val project = requireNotNull(event.getData(PlatformDataKeys.PROJECT))
 
         if ("groovy" != currentFile.extension) {
             return
         }
 
+        // todo exception handling
+        val psiFile = requireNotNull(PsiManager.getInstance(project).findFile(currentFile))
+
         // TODO why must this be the first action otherwise exception
-        GroovyFixesApplier.applyGroovyFixes(event)
+        GroovyFixesApplier.applyGroovyFixes(event, psiFile)
 
         /* TODO Groovy array handling
             List<IdentAttachmentMetaData> documents = new ArrayList<>()
