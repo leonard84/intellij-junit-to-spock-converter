@@ -23,7 +23,7 @@ intellij {
     pluginName = "Groovyfier"
 //    version = "191.6183.87" // overrides plugin.xml since-build in case of conflict, https://www.jetbrains.com/intellij-repository/releases
     version = "2019.3.3" // overrides plugin.xml since-build in case of conflict, https://www.jetbrains.com/intellij-repository/releases
-    setPlugins("Groovy", "java") // Bundled plugin dependencies
+    setPlugins("Groovy", "java", "properties") // Bundled plugin dependencies
 }
 
 tasks.withType<PublishTask> {

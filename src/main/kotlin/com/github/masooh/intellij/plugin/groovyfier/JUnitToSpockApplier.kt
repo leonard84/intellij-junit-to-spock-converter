@@ -49,6 +49,18 @@ class JUnitToSpockApplier(event: AnActionEvent, private val psiFile: PsiFile) {
     private val javaFactory
         get() = JavaPsiFacade.getInstance(project).elementFactory
 
+    private fun GrStatement.addLabel(block: Block): Block {
+        val statementWithLabel = groovyFactory.createStatementFromText("${block.label}: statement", this.parent)
+        val textStatement = statementWithLabel.lastChild as GrStatement
+        textStatement.replaceWithStatement(this)
+
+        // todo https://youtrack.jetbrains.com/issue/IDEA-185879
+        //  wie komme ich an attachement
+
+        this.replaceWithStatement(statementWithLabel)
+        return block
+    }
+
     fun transformToSpock() {
         // spock has it's own runner
         typeDefinition.getAnnotation("org.junit.runner.RunWith")?.delete()
@@ -152,7 +164,7 @@ class JUnitToSpockApplier(event: AnActionEvent, private val psiFile: PsiFile) {
                     currentBlock = when {
                         statement.isAssertion() -> {
                             val replacedStatement = replaceWithSpockAssert(statement as GrMethodCallExpression)
-                            addLabelToStatement(EXPECT, replacedStatement)
+                            replacedStatement.addLabel(EXPECT)
                         }
                         else -> {
                             val nextStatement = statements.getOrNull(idx + 1)
@@ -160,12 +172,12 @@ class JUnitToSpockApplier(event: AnActionEvent, private val psiFile: PsiFile) {
                                 // -> method has only single statement
                                 nextStatement == null -> {
                                     when {
-                                        exceptionClass != null -> addLabelToStatement(WHEN, statement)
-                                        else -> addLabelToStatement(EXPECT, statement)
+                                        exceptionClass != null -> statement.addLabel(WHEN)
+                                        else -> statement.addLabel(EXPECT)
                                     }
                                 }
-                                nextStatement.isAssertion() -> addLabelToStatement(WHEN, statement)
-                                else -> addLabelToStatement(GIVEN, statement)
+                                nextStatement.isAssertion() -> statement.addLabel(WHEN)
+                                else -> statement.addLabel(GIVEN)
                             }
                         }
                     }
@@ -176,7 +188,7 @@ class JUnitToSpockApplier(event: AnActionEvent, private val psiFile: PsiFile) {
                         // todo hier wird ersetzt, um das ersetzte wieder zu ersetzen
                         //    kann man das in einem machen? statement replace with (label + spock assert)
                         val statementWithSpockAssertion = replaceWithSpockAssert(statement as GrMethodCallExpression)
-                        currentBlock = addLabelToStatement(THEN, statementWithSpockAssertion)
+                        currentBlock = statementWithSpockAssertion.addLabel(THEN)
                     }
                 }
                 EXPECT -> {
@@ -190,9 +202,9 @@ class JUnitToSpockApplier(event: AnActionEvent, private val psiFile: PsiFile) {
                     log.info("given:")
                     val nextStatement = statements.getOrNull(idx + 1)
                     when {
-                        nextStatement == null && exceptionClass == null -> currentBlock = addLabelToStatement(EXPECT, statement)
+                        nextStatement == null && exceptionClass == null -> currentBlock = statement.addLabel(EXPECT)
                         (nextStatement == null && exceptionClass != null) || nextStatement!!.isAssertion() -> {
-                            currentBlock = addLabelToStatement(WHEN, statement)
+                            currentBlock = statement.addLabel(WHEN)
                         }
                     }
                 }
@@ -226,21 +238,9 @@ class JUnitToSpockApplier(event: AnActionEvent, private val psiFile: PsiFile) {
                 null // stay in block
             }
             else -> {
-                addLabelToStatement(WHEN, statement) // next when
+                statement.addLabel(WHEN) // next when
             }
         }
-    }
-
-    private fun addLabelToStatement(block: Block, statement: GrStatement): Block {
-        val statementWithLabel = groovyFactory.createStatementFromText("${block.label}: statement", statement.parent)
-        val textStatement = statementWithLabel.lastChild as GrStatement
-        textStatement.replaceWithStatement(statement)
-
-        // todo https://youtrack.jetbrains.com/issue/IDEA-185879
-        //  wie komme ich an attachement
-
-        statement.replaceWithStatement(statementWithLabel)
-        return block
     }
 
     private fun replaceWithSpockAssert(methodCallExpression: GrMethodCallExpression): GrExpression {
@@ -373,6 +373,8 @@ class JUnitToSpockApplier(event: AnActionEvent, private val psiFile: PsiFile) {
         }
     }
 }
+
+
 
 private fun String.camelToSpace(): String {
     return StringUtil.join(GroovyNamesUtil.camelizeString(this), { StringUtil.decapitalize(it) }, " ")
