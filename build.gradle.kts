@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     idea
-    id("org.jetbrains.intellij") version "0.4.16" // https://github.com/JetBrains/gradle-intellij-plugin
+    id("org.jetbrains.intellij") version "0.4.18" // https://github.com/JetBrains/gradle-intellij-plugin
     kotlin("jvm") version "1.3.31"
     id("org.sonarqube") version "2.8"
 }
@@ -23,6 +23,7 @@ intellij {
     pluginName = "Groovyfier"
 //    version = "191.6183.87" // overrides plugin.xml since-build in case of conflict, https://www.jetbrains.com/intellij-repository/releases
     version = "2019.3.3" // overrides plugin.xml since-build in case of conflict, https://www.jetbrains.com/intellij-repository/releases
+    // transitive dependencies has to added: https://github.com/JetBrains/gradle-intellij-plugin/issues/38
     setPlugins("Groovy", "java", "properties") // Bundled plugin dependencies
 }
 

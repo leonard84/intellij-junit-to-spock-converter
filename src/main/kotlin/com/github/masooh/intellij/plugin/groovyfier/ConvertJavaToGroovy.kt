@@ -32,8 +32,6 @@ class ConvertJavaToGroovy : AnAction() {
         val project = requireNotNull(event.project)
         val currentFile = event.getData(PlatformDataKeys.VIRTUAL_FILE)
 
-        // todo currentFile.!! war wohl keine gute Idee -> behandeln
-
         if ("java" == currentFile!!.extension) {
             val groovySourceRoot = createGroovySourceRoot(project, currentFile)
 
@@ -98,7 +96,7 @@ class ConvertJavaToGroovy : AnAction() {
     }
 
     override fun update(event: AnActionEvent) {
-        val file = event.getData(PlatformDataKeys.PSI_FILE)
+        val file = event.getData(PlatformDataKeys.VIRTUAL_FILE)
         val editor = event.getData(PlatformDataKeys.EDITOR)
 
         val enabled = file != null &&
